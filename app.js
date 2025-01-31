@@ -23,7 +23,7 @@ app.use('/uploads/images', express.static(path.join('uploads','images')));
 
 app.use((req,res,next)=>{
     // set headers to API access 
-    res.setHeader('Access-Control-Allow-Origin',AllowOrigin);
+    res.setHeader('Access-Control-Allow-Origin',"https://phonebook-clientside-production.up.railway.app");
     res.setHeader('Access-Control-Allow-Headers',"Origin, X-Requested-With, Content-Type, Accept, Authorization");
     res.setHeader('Access-Control-Allow-Methods','GET, POST, PATCH, DELETE')
     next();
