@@ -34,7 +34,7 @@ router.get('/email/:email',
 
 router.post('/',
     checkAuth, 
-    fileUpload.single('contactPhoto'),
+    // fileUpload.single('contactPhoto'),
     [
         check('email').normalizeEmail().isEmail(),
         check('firstName')
@@ -58,7 +58,7 @@ router.patch('/password/reset/:id',
 
 router.patch('/:id',
     checkAuth, 
-    fileUpload.single('contactPhoto'),
+    // fileUpload.single('contactPhoto'),
     inputValidation,
     updateUser);
 

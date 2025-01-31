@@ -24,7 +24,7 @@ router.patch('/unshare/:cid/:userid',
 
 router.post('/',
     checkAuth, 
-    fileUpload.single('contactPhoto'),
+    // fileUpload.single('contactPhoto'),
     [
         check('contactNumber')
             .not()
@@ -38,7 +38,7 @@ router.post('/',
 
 router.patch('/:id',
     checkAuth, 
-    fileUpload.single('contactPhoto'),
+    // fileUpload.single('contactPhoto'),
     inputValidation,
     updateContact);
 
