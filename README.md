@@ -20,5 +20,12 @@ NODE_SERVER="5000"
 - yarn install
 - yarn start
 
-# Endpoints list #
+# Production #
+
+Admin Credentials:
+Email : admin@gmail.com
+Password :  111111
+
+Client URL : https://phonebook-clientside-production.up.railway.app
+Server URL : https://phonebook-serverside-production.up.railway.app
 
