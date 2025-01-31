@@ -25,14 +25,14 @@ router.patch('/unshare/:cid/:userid',
 router.post('/',
     checkAuth, 
     // fileUpload.single('contactPhoto'),
-    // [
-    //     check('contactName')
-    //         .not()
-    //         .isEmpty(), 
-    //     check('contactNumber')
-    //         .not()
-    //         .isEmpty(),
-    // ],
+    [
+        check('contactName')
+            .not()
+            .isEmpty(), 
+        check('contactNumber')
+            .not()
+            .isEmpty(),
+    ],
     inputValidation,
     createContact);
 
