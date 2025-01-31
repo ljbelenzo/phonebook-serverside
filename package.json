@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "clear && nodemon --env-file=.env app.js"
+    "start": "nodemon --env-file=.env app.js"
   },
   "author": "Renzo Jay C. Belenzo",
   "license": "ISC",
