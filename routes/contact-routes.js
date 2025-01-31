@@ -6,7 +6,7 @@ import checkAuth from '../middleware/check-auth.js';
 
 import { fileUpload } from '../middleware/file-upload.js';
 
-import {shareContact, getContacts, createContact, updateContact, deleteContact} from '../controllers/contact-controller.js'
+import {unShareContact, shareContact, getContacts, createContact, updateContact, deleteContact} from '../controllers/contact-controller.js'
 
 const router = express.Router();
 
@@ -14,17 +14,18 @@ router.get('/',
     checkAuth, 
     getContacts);
 
-router.post('/share/:cid/:userid',
+router.patch('/share/:cid/:userid',
     checkAuth, 
     shareContact);
+
+router.patch('/unshare/:cid/:userid',
+    checkAuth, 
+    unShareContact);
 
 router.post('/',
     checkAuth, 
     fileUpload.single('contactPhoto'),
     [
-        check('ownerId')
-            .not()
-            .isEmpty(), 
         check('contactNumber')
             .not()
             .isEmpty(), 

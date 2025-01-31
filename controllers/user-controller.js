@@ -24,12 +24,26 @@ export const getUserContacts = async (req,res,next) => {
     try{
         const { userId } = req?.userData || undefined;
 
-        const userContacts = await Contacts.find({ownerId:userId});
-        const {sharedContacts} = await User.findById(userId).populate("sharedContacts");
+        let userContacts = await Contacts.find({ownerId:userId});
+        let {sharedContacts} = await User.findById(userId).populate("sharedContacts");
 
-        const data = [...userContacts,...sharedContacts]
+        sharedContacts = sharedContacts.map((contacts)=>({
+            ...contacts.toObject({getters:true}),
+            shared: true,
+        }));
 
-        res.json({count:data.length, data});
+        userContacts = userContacts.map(contacts=>contacts.toObject({getters:true}))
+
+        let data = [...userContacts,...sharedContacts];
+
+        data = data.sort((a, b) => a.contactName.localeCompare(b.contactName));
+
+        res.json({
+        count:{
+            contacts:data.length,
+            shared:sharedContacts.length
+        }, 
+        data});
     }catch(err){
         return next(new HttpError(`Error : ${err.message}`, 500));
     }
@@ -40,7 +54,7 @@ export const login = async (req,res,next) => {
         const { email, password} = req?.body || {};
 
         const existingUser = await User.findOne({email});
-        const { password:userPassword, status } = existingUser;
+        const { password:userPassword, status } = existingUser || {};
 
         if(!existingUser){
             return next(new HttpError(`User not found`, 500));
@@ -58,13 +72,36 @@ export const login = async (req,res,next) => {
 
         const token = generateJWT(existingUser);
 
-        const {id, email:userEmail} = existingUser;
+        const {id, email:userEmail, role} = existingUser;
 
         res.status(201).json({data:{
             id,
             email:userEmail,
             token,
+            role,
         }});
+    }catch(err){
+        return next(new HttpError(`Error : ${err.message}`, 500));
+    }
+};
+
+export const getUsersByEmail = async (req,res,next) => {
+    try{
+        const userEmail = req.params?.email || undefined;
+
+        let data = await User.findOne({email:userEmail},'-password');
+
+        data = data? data.toObject({getters:true}) : data;
+
+        // if(!data){
+        //     return next(new HttpError(`Email not found'`, 500));
+        // };
+
+        if(data?.id && data.status !== "active"){
+            return next(new HttpError(`Email ${data.status === "deactivated" ? "has been deactivated" : "is still pending approval"}`, 500));
+        }
+
+        res.json({data:data?.id});
     }catch(err){
         return next(new HttpError(`Error : ${err.message}`, 500));
     }
@@ -104,7 +141,7 @@ export const createUser = async (req,res,next) => {
         const hashedPassword = await bcrypt.hash(password,12);
 
         const createUser = new User({
-            contactPhoto: req?.file?.path || `https://picsum.photos/${Math.floor(Math.random() * 400)}/${Math.floor(Math.random() * 400)}`,
+            contactPhoto: req?.file?.path || `https://picsum.photos/${Math.floor(Math.random() * 100) + 200}/${Math.floor(Math.random() * 100) + 200}`,
             firstName,
             lastName,
             contactNumber,
@@ -131,7 +168,7 @@ export const updateUser = async (req,res,next) => {
 
         const checkUser = await User.findById(userId);
 
-        const { role } = checkUser;
+        const { role } = checkUser || {};
 
         if(!checkUser){
             return next(new HttpError(`User to update not found'`, 500));
@@ -152,6 +189,35 @@ export const updateUser = async (req,res,next) => {
 
         res.status(201).json({data:{
             message:`User has been updated"`
+        }});
+    }catch(err){
+        return next(new HttpError(`Error : ${err.message}`, 500));
+    }
+};
+
+export const resetUserPassword = async (req,res,next) => {
+    try{
+        const { password } = req?.body || {};
+        const userId = req.params?.id || undefined;
+
+        const checkUser = await User.findById(userId);
+
+        const { role } = checkUser || {};
+
+        if(!checkUser){
+            return next(new HttpError(`User to update not found'`, 500));
+        };
+
+        if(role === "deactivated"){
+            return next(new HttpError(`User to update has been deactivated'`, 500));
+        }
+
+        checkUser.password = await bcrypt.hash(password,12);
+
+        await checkUser.save();
+
+        res.status(201).json({data:{
+            message:`User password has been updated"`
         }});
     }catch(err){
         return next(new HttpError(`Error : ${err.message}`, 500));

@@ -6,7 +6,7 @@ import checkAuth from '../middleware/check-auth.js';
 
 import { fileUpload } from '../middleware/file-upload.js';
 
-import {login,getUserContacts, getUsers,createUser, updateUser, DeleteUser} from '../controllers/user-controller.js'
+import {resetUserPassword, getUsersByEmail, login,getUserContacts, getUsers,createUser, updateUser, DeleteUser} from '../controllers/user-controller.js'
 
 const router = express.Router();
 
@@ -29,6 +29,9 @@ router.get('/',
     checkAuth, 
     getUsers);
 
+router.get('/email/:email',
+    getUsersByEmail);
+
 router.post('/',
     checkAuth, 
     fileUpload.single('contactPhoto'),
@@ -49,6 +52,9 @@ router.post('/',
     ],  
     inputValidation,
     createUser);
+
+router.patch('/password/reset/:id',
+    resetUserPassword);
 
 router.patch('/:id',
     checkAuth, 

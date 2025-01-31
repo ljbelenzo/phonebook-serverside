@@ -37,6 +37,7 @@ app.use('/contact',contactRoutes);
 
 // middleware to handle unregistered routes
 app.use((req,res,next)=>{
+    console.log(req.url);
     const error = new HttpError('Route Invalid', 404);
     throw error;
 });

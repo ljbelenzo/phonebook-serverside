@@ -6,7 +6,7 @@ import fs from "fs";
 
 export const getContacts = async (req,res,next) => {
     try{
-        let { where = "{}", sort = "[]", search } = req.query;
+        let { where = "{}", sort = "[]" } = req.query;
 
         let { skip = 0, limit = 50 } = req.query;
 
@@ -29,7 +29,7 @@ export const getContacts = async (req,res,next) => {
     }
 };
 
-export const shareContact = async (req,res,next) => {
+export const unShareContact = async (req,res,next) => {
     try{
         const contactId = req.params?.cid || undefined;
         const userId = req.params?.userid || undefined;
@@ -44,6 +44,57 @@ export const shareContact = async (req,res,next) => {
         if(!checkUser){
             return next(new HttpError(`User not found'`, 500));
         };
+        
+        if(checkUser.status !== "active"){
+            return next(new HttpError(`User is ${checkUser.status === "deactivated" ? checkUser.status : "is still pending approval"}`, 500));
+        }
+
+        const { firstName, lastName, sharedContacts } = checkUser;
+
+        // check if already been shared to the user
+        const checkExists = sharedContacts.includes(contactId);
+
+        if(!checkExists){
+            return next(new HttpError(`This contact has not been shared to ${firstName} ${lastName}'`, 500));
+        };
+
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        await checkContact.save({session})
+        checkUser.sharedContacts.pull(checkContact);
+        await checkUser.save({session});
+        await session.commitTransaction();
+
+        res.status(201).json({message:`Contact has been unshared with ${firstName} ${lastName}.`});
+    }catch(err){
+        return next(new HttpError(`Error : ${err.message}`, 500));
+    }
+};
+
+export const shareContact = async (req,res,next) => {
+    try{
+        const contactId = req.params?.cid || undefined;
+        const userId = req.params?.userid || undefined;
+        const { userId:loggeduser } = req?.userData || undefined;
+
+        let checkContact = await Contacts.findById(contactId);
+        const checkUser = await User.findById(userId);
+
+        if(!checkContact){
+            return next(new HttpError(`Contact not found'`, 500));
+        };
+
+        if(!checkUser){
+            return next(new HttpError(`User not found'`, 500));
+        };
+
+        if(loggeduser !== checkContact?.ownerId.toString()){
+            return next(new HttpError(`Action not permitted`, 500));
+        }
+
+        if(loggeduser === userId){
+            return next(new HttpError(`Cannot share contact to own phonebook`, 500));
+        }
 
         if(checkUser.status !== "active"){
             return next(new HttpError(`User is ${checkUser.status === "deactivated" ? checkUser.status : "is still pending approval"}`, 500));
@@ -73,17 +124,8 @@ export const shareContact = async (req,res,next) => {
 
 export const createContact = async (req,res,next) => {
     try{
-        const { ownerId,contactName,contactNumber,email } = req?.body || {};
-
-        const checkUser = await User.findById(ownerId);
-
-        if(!checkUser){
-            return next(new HttpError(`User not found'`, 500));
-        };
-
-        if(checkUser.status !== "active"){
-            return next(new HttpError(`User is ${checkUser.status === "deactivated" ? checkUser.status : "is still pending approval"}`, 500));
-        }
+        const { contactName,contactNumber,email } = req?.body || {};
+        const { userId:ownerId } = req?.userData || undefined;
 
         // check duplicate number
         const checkContact = await Contacts.find({ownerId, contactNumber, contactName });
@@ -96,7 +138,7 @@ export const createContact = async (req,res,next) => {
             contactName,
             contactNumber,
             email,
-            contactPhoto: req?.file?.path || `https://picsum.photos/${Math.floor(Math.random() * 400)}/${Math.floor(Math.random() * 400)}`,
+            contactPhoto: req?.file?.path || `https://picsum.photos/${Math.floor(Math.random() * 100) + 200}/${Math.floor(Math.random() * 100) + 200}`,
         });
 
         await createContacts.save();
@@ -111,6 +153,7 @@ export const createContact = async (req,res,next) => {
 
 export const updateContact = async (req,res,next) => {
     try{
+        const { userId:loggeduser } = req?.userData || undefined;
         const body = req?.body || undefined;
         const contactId = req.params?.id || undefined;
 
@@ -118,6 +161,10 @@ export const updateContact = async (req,res,next) => {
 
         if(!checkContact){
             return next(new HttpError(`Contact to update not found'`, 500));
+        }
+
+        if(loggeduser !== checkContact?.ownerId.toString()){
+            return next(new HttpError(`Action not permitted`, 500));
         }
 
         Object.entries(body).map(([key, value]) => {
@@ -138,9 +185,11 @@ export const updateContact = async (req,res,next) => {
 };
 
 export const deleteContact = async (req,res,next) => {
+    const session = await mongoose.startSession();
     try{
         const contactId = req.params?.id || undefined;
-        const checkContact = await Contacts.findById(contactId).populate("ownerId");
+
+        const checkContact = await Contacts.findById(contactId);
 
         if(!checkContact){
             return next(new HttpError(`Contact to delete not found'`, 500));
@@ -148,11 +197,17 @@ export const deleteContact = async (req,res,next) => {
 
         const ImagePath = checkContact?.contactPhoto;
 
-        const session = await mongoose.startSession();
+        const checkSharedUsers = await User.find({sharedContacts:contactId});
+
         session.startTransaction();
+        // checkSharedUsers.sharedContacts.pull(checkContact);
+
+        checkSharedUsers.map(async (sharedUser)=>{
+            sharedUser.sharedContacts.pull(checkContact);
+            await sharedUser.save({session});
+        });
+
         await checkContact.deleteOne({session});
-        checkContact.ownerId.sharedContacts.pull(checkContact);
-        await checkContact.ownerId.save({session});
         await session.commitTransaction();
 
         fs.unlink(ImagePath,err=>{
@@ -161,6 +216,8 @@ export const deleteContact = async (req,res,next) => {
 
         res.status(201).json({message:"Contact has been deleted."});
     }catch(err){
+        await session.abortTransaction();
+        session.endSession();
         return next(new HttpError(`Error : ${err.message}`, 500));
     }
 };
