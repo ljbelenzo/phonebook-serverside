@@ -124,27 +124,28 @@ export const shareContact = async (req,res,next) => {
 
 export const createContact = async (req,res,next) => {
     try{
-        const { contactName,contactNumber,email } = req?.body || {};
+        const { contactFirstName,contactLastName,contactNumber,contactEmail } = req?.body || {};
         const { userId:ownerId } = req?.userData || undefined;
 
         // check duplicate number
-        const checkContact = await Contacts.find({ownerId, contactNumber, contactName });
+        const checkContact = await Contacts.find({ownerId, contactNumber });
         if(checkContact.length){
-            return next(new HttpError(`Contact Number:${checkContact[0].contactNumber} with Name '${checkContact[0].contactName}' is already existed on your phoneboks`, 500));
+            return next(new HttpError(`Contact Number:${checkContact[0].contactNumber} with Name '${checkContact[0].contactFirstName}' is already existed on your phoneboks`, 500));
         };
 
         const createContacts = new Contacts({
             ownerId,
-            contactName,
+            contactFirstName,
+            contactLastName,
             contactNumber,
-            email,
+            contactEmail,
             contactPhoto: req?.file?.path || `https://picsum.photos/${Math.floor(Math.random() * 100) + 200}/${Math.floor(Math.random() * 100) + 200}`,
         });
 
         await createContacts.save();
         
         res.status(201).json({data:{
-            message:`Contact ${contactName} : ${contactNumber} has been created`
+            message:`Contact ${contactFirstName} : ${contactNumber} has been created`
          }});
     }catch(err){
         return next(new HttpError(`Error : ${err.message}`, 500));

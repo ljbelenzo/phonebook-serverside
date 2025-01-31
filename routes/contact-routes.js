@@ -26,7 +26,13 @@ router.post('/',
     checkAuth, 
     // fileUpload.single('contactPhoto'),
     [
-        check('contactName')
+        check('contactFirstName')
+            .not()
+            .isEmpty(), 
+        check('contactLastName')
+            .not()
+            .isEmpty(), 
+        check('contactEmail')
             .not()
             .isEmpty(), 
         check('contactNumber')
