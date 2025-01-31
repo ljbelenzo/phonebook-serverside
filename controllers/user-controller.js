@@ -36,7 +36,7 @@ export const getUserContacts = async (req,res,next) => {
 
         let data = [...userContacts,...sharedContacts];
 
-        data = data.sort((a, b) => a.contactName.localeCompare(b.contactName));
+        // data = data.sort((a, b) => a.contactName.localeCompare(b.contactName));
 
         res.json({
         count:{
